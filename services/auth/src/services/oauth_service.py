@@ -5,8 +5,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from src.config import Config
 
-
-class GoogleOAuth2Manager:
+class GoogleOAuthService:
     def __init__(self, client_id: str, client_secret: str, redirect_uri: str):
         self.sess = Session()
         self.client_id = client_id
@@ -37,22 +36,26 @@ class GoogleOAuth2Manager:
         access_token = None
         refresh_token = None
 
-        # try:
-        r = self.sess.post(
-            Config.GOOGLE_TOKEN_URL,
-            data=data,
-            timeout=5
-        )
-        r.raise_for_status()  # Raise exception for non-successful status codes (4xx, 5xx)
+        try:
+            r = self.sess.post(
+                Config.GOOGLE_TOKEN_URL,
+                data=data,
+                timeout=5
+            )
+            r.raise_for_status()  # Raise exception for non-successful status codes (4xx, 5xx)
 
-        if r.ok: # status code is < 400 (200 codes)
-            token_data = r.json()
-            access_token = token_data['access_token']
-            refresh_token = token_data['refresh_token']
-        else:
-            # Handle specific error cases or raise an exception
-            # based on the response status code or content
-            pass
+            if r.ok: # status code is < 400, 500 (200 codes)
+                token_data = r.json()
+                access_token = token_data['access_token']
+                refresh_token = token_data['refresh_token']
+            else:
+                # Handle specific error cases or raise an exception
+                # based on the response status code or content
+                pass
+
+        except Exception as e:
+            raise
+
 
         # except Timeout as e:
         #     logging.error("Request timed out: %s", e)

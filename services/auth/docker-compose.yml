@@ -1,0 +1,18 @@
+version: '3.9'
+
+
+# Database is responsible for st
+services:
+  auth-db:
+    image: postgres:15.3-bullseye
+    ports:
+      - 5433:5432
+    volumes:
+      - db_data:/var/lib/postgres/data
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=auth
+
+volumes:
+  db_data:
