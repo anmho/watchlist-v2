@@ -7,6 +7,7 @@ class Base(DeclarativeBase):
     pass
 
 
+
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, echo=True)
 Session = sessionmaker(bind=engine)
 

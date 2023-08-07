@@ -1,6 +1,7 @@
 from flask import jsonify, abort
-from src import create_app
 from werkzeug.exceptions import HTTPException
+
+from src import create_app
 
 app = create_app()
 
@@ -20,4 +21,5 @@ def handle_error(e: Exception):
 
 
 if __name__ == "__main__":
-    app.run(debug=app.config['DEBUG'])
+    # app.run(debug=app.config['DEBUG'], host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000)

@@ -5,6 +5,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from src.config import Config
 
+
 class GoogleOAuthService:
     def __init__(self, client_id: str, client_secret: str, redirect_uri: str):
         self.sess = Session()
@@ -21,7 +22,6 @@ class GoogleOAuthService:
         # Exponential Backoff with factor of 0.1
         self.sess.mount('http://', HTTPAdapter(max_retries=retries))
         self.sess.mount('https://', HTTPAdapter(max_retries=retries))
-
 
     def fetch_tokens(self, code: str):
         # Exchange authorization code for access token
@@ -44,7 +44,7 @@ class GoogleOAuthService:
             )
             r.raise_for_status()  # Raise exception for non-successful status codes (4xx, 5xx)
 
-            if r.ok: # status code is < 400, 500 (200 codes)
+            if r.ok:  # status code is < 400, 500 (200 codes)
                 token_data = r.json()
                 access_token = token_data['access_token']
                 refresh_token = token_data['refresh_token']
@@ -55,7 +55,6 @@ class GoogleOAuthService:
 
         except Exception as e:
             raise
-
 
         # except Timeout as e:
         #     logging.error("Request timed out: %s", e)
@@ -69,7 +68,6 @@ class GoogleOAuthService:
 
         return access_token, refresh_token
 
-
     def get_user_info(self, access_token: str):
         # Get user info
         headers = {'Authorization': f'Bearer {access_token}'}
@@ -78,4 +76,3 @@ class GoogleOAuthService:
         )
         user_info = r.json()
         return user_info
-

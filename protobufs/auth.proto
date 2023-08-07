@@ -1,0 +1,20 @@
+// syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+enum RegistrationType {
+    EMAIL_PASSWORD = 0;
+    GOOGLE = 1;
+}
+
+message ValidateCredentialsRequest {
+    required string email = 1;
+    required string jwt = 2;
+}
+
+message ValidateCredentialsResponse {
+    required bool valid = 1;
+}
+
+service AuthService {
+    rpc ValidateCredentials(ValidateCredentialsRequest) returns (ValidateCredentialsResponse);
+}

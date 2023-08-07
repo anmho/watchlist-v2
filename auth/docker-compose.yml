@@ -1,12 +1,10 @@
 version: '3.9'
 
-
-# Database is responsible for st
 services:
   auth-db:
     image: postgres:15.3-bullseye
     ports:
-      - 5433:5432
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgres/data
     environment:

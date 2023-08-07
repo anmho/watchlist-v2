@@ -1,3 +1,5 @@
+import sys
+from psycopg2 import IntegrityError
 from pydantic import ValidationError
 from werkzeug.exceptions import NotFound, BadRequest, Forbidden, InternalServerError, UnsupportedMediaType
 import binascii
@@ -10,6 +12,7 @@ from src.config import Config
 import logging
 import requests
 from pprint import pprint
+
 from ..config import Config
 from requests import PreparedRequest, Session
 from requests.adapters import HTTPAdapter
@@ -19,6 +22,11 @@ from authlib.integrations.requests_client import OAuth2Session
 import base64
 import traceback
 from ..models import CreateUserCredentials, UserCredential, Session
+
+
+from src.proto.user_pb2 import User
+from src.proto.user_pb2_grpc import UserServiceStub
+print(User(id="1", email="a@a.com"))
 
 auth = Blueprint('auth', __name__)
 
@@ -44,66 +52,63 @@ def sign_up():
     """
 
     # Try to parse the body
-    parsed_user_creds = None
+    user_creds_dict = None
+
     try:
         body = request.get_json()
-        create_user_dto = CreateUserCredentials(**body)
-        parsed_user_creds = create_user_dto.model_dump_json()
-
-    except ValidationError as e:
-        print(e.json())
-        raise BadRequest("bad request", response={"errors": e.errors()})
     except UnsupportedMediaType as e:
         logging.error(e)
         raise UnsupportedMediaType("body must be application/json") from e
 
+    try:
+        create_user_dto = CreateUserCredentials(**body)
+        user_creds_dict = create_user_dto.model_dump()
+
+    except ValidationError as e:
+        print(e.json())
+        raise BadRequest("bad request", response={"errors": e.errors()}) from e
+
     # Create the user credentials in the database
+    email = user_creds_dict["email"]
+    password = user_creds_dict["password"]
 
     with Session() as session:
         try:
-            user_credentials = UserCredential(**parsed_user_creds)
+            user_credentials = UserCredential(email=email)
+            user_credentials.set_password(password)
             session.add(user_credentials)
 
             # Make RPC to Users service to create a user object
 
             # Return an access token and refresh token
 
-
-            
-
-        except:
+        except IntegrityError as e:
             session.rollback()
+            raise BadRequest(e.pgerror) from e
+
         else:
             session.commit()
+            return user_creds_dict
 
 
-@auth.route('/oauth2/google/token', methods=['POST'])
-def refresh_token():
-    data: dict = request.get_json()
+# @auth.route('/oauth2/google/token', methods=['POST'])
+# def refresh_token():
+#     data: dict = request.get_json()
 
-    refresh_token = data.get('refresh_token')
-
-
-@auth.route('/', methods=['GET'])
-def index():
-    return '<a href="/login">Login with Google</a>'
-
-# /login/google
+#     refresh_token = data.get('refresh_token')
 
 
-@auth.route('/login/google')
-def login_with_google():
-    redirect_uri = url_for('auth.authorize_google', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
-
-# revoke endpoint
+# @auth.route('/login/google')
+# def login_with_google():
+#     redirect_uri = url_for('auth.authorize_google', _external=True)
+#     return oauth.google.authorize_redirect(redirect_uri)
 
 
-@auth.route('/authorize/google')
-def authorize_google():
-    token = oauth.google.authorize_access_token()
-    print(token)
+# @auth.route('/authorize/google')
+# def authorize_google():
+#     token = oauth.google.authorize_access_token()
+#     print(token)
 
-    # email = session.get()
+#     # email = session.get()
 
-    return token
+#     return token
