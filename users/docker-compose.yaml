@@ -1,0 +1,22 @@
+services:
+  # auth:
+  #   build:
+  #     context: ./auth
+  #     dockerfile: Dockerfile
+  #   depends_on:
+  #     - auth_db
+  #   ports:
+  #     - '5002:5000'
+  auth_db:
+    image: postgres:15.3-bullseye
+    ports:
+      - '5433:5432'
+    volumes:
+      - user_db_data:/var/lib/postgres/data
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=dev
+
+volumes:
+  user_db_data:
