@@ -1,0 +1,12 @@
+**/venv/
+*.env
+__pycache__
+instance
+.vscode
+
+.pytest_cache
+
+**/protos/**
+!**/protos/.gitkeep
+!**/protos/__init__.py
+

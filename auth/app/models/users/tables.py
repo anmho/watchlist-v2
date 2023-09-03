@@ -4,22 +4,17 @@ from sqlalchemy import Uuid, String
 from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer
-from . import Base
+from app.models.database import Base
 import bcrypt
 
 
-class CreateUserCredentials(BaseModel):
-    email: EmailStr
-    password: Optional[str]
+class User(Base):
+    __tablename__ = 'users'
 
-
-class UserCredential(Base):
-    __tablename__ = 'user_credentials'
-
-    id: Mapped[str] = mapped_column(
-        Uuid, primary_key=True, default=uuid4)
+    id: Mapped[str] = mapped_column(Uuid, primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(128), unique=True)
     password: Mapped[Optional[str]] = mapped_column(String(128))
+    registration_type: Mapped[str]
 
     def set_password(self, password: str):
         pw_hash = bcrypt.hashpw(
@@ -27,4 +22,7 @@ class UserCredential(Base):
         self.password = pw_hash
 
     def verify_password(self, password: str):
-        return bcrypt.checkpw(bytes(password), bytes(self.password))
+        return bcrypt.checkpw(password.encode("utf-8"), self.password.encode("utf-8"))
+
+    def __repr__(self):
+        return f"User(id={self.id=} email={self.email})"
