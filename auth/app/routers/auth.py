@@ -3,12 +3,14 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 import sqlalchemy
 from app.models.tokens.dto import RefreshTokenResponse
+from app.routers.utils import basic_auth_required
 from app.services.blacklist import BlacklistService
 from app.models.users.dto import CreateUserRequest, CreateUserResponse
-from app.models.database import Session
+from app.models.database import Session, get_db
 from app.models.users.tables import User
 from logging import Logger
 from app.services.tokens import TokenService
+from app.services.users import UserService
 from app.utils.logger import LoggerFactory
 from fastapi.security import HTTPBasic, HTTPBasicCredentials, OAuth2PasswordBearer
 
@@ -29,64 +31,45 @@ basic_auth = HTTPBasic()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="tokens")
 
 
-def basic_auth_required(credentials: HTTPBasicCredentials = Depends(basic_auth)) -> User:
-    # Check if user with email exists
-    email = credentials.username
-    password = credentials.password
-
-    with Session() as session:
-        user: User = session.query(User).filter_by(email=email).first()
-        if not user or not user.verify_password(password):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-
-        return user
-
-
 @auth.post("/register")
-async def register_email_pw(createUserDto: CreateUserRequest) -> CreateUserResponse:
+async def register_email_pw(
+    createUserDto: CreateUserRequest,
+    db: Session = Depends(get_db)
+) -> CreateUserResponse:
     email, password = createUserDto.email, createUserDto.password
 
-    user = None
+    # Does the user exist
+    user = UserService.get_user_by_email(email=email, session=db)
+    if user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"user with {email=} already exists")
 
-    with Session() as session:
-        try:
-            # Create the user
-            user = User(email=email, registration_type="standard")
-            user.set_password(password)
-            session.add(user)
-            session.commit()
-        except sqlalchemy.exc.IntegrityError as e:
-            # Rollback if error occurred
-            logger.error(e)
-            session.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f"user with {email=} already exists")
-        except Exception as e:
-            # Rollback if error occured
-            logger.error(e)
-            session.rollback()
+    try:
+        user = UserService.create_user(
+            email=email, password=password, session=db)
+    except sqlalchemy.exc.IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    user_id = str(user.id)
+    access_token = TokenService.create_access(user_id)
+    refresh_token = TokenService.create_refresh(user_id)
 
-        logger.debug(user)
-        access_token = TokenService.create_access(sub=str(user.id))
-        refresh_token = TokenService.create_refresh(sub=str(user.id))
+    data = CreateUserResponse(
+        access_token=access_token, refresh_token=refresh_token)
 
-        data = {
-            "access_token": access_token,
-            "refresh_token": refresh_token
-        }
-
-        response = JSONResponse(
-            content=data, status_code=status.HTTP_201_CREATED)
-
-        return response
+    response = JSONResponse(
+        content=data.model_dump(), status_code=status.HTTP_201_CREATED)
+    return response
 
 
 @auth.post("/tokens")
 def login_email_pw(user: User = Depends(basic_auth_required)):
-    """ gets access and refresh with email and password """
+    """ gets access and refresh with email and password. used for signing in on a client """
 
     data = {
         "access_token": TokenService.create_access(str(user.id)),
@@ -100,8 +83,13 @@ def login_email_pw(user: User = Depends(basic_auth_required)):
 
 @auth.post("/refresh")
 def refresh(refresh_token: str = Depends(oauth2_scheme)) -> RefreshTokenResponse:
-    """ Verifies refresh_token and returns access token"""
+    """ Verifies refresh_token and returns access token. used for refreshing the login of a user """
+
+    # abstract this to a function
     if not TokenService.check_token(refresh_token):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    if BlacklistService.contains(refresh_token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     claims = TokenService.decode(refresh_token)
@@ -110,14 +98,9 @@ def refresh(refresh_token: str = Depends(oauth2_scheme)) -> RefreshTokenResponse
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     access_token = TokenService.create_access(claims['sub'])
+    data = {"access_token": access_token}
 
-    data = {
-        "access_token": access_token
-    }
-
-    response = JSONResponse(content=data, status_code=201)
-
-    return response
+    return JSONResponse(content=data, status_code=201)
 
 
 @auth.post("/revoke")

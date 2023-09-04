@@ -11,3 +11,12 @@ print(Config.SQLALCHEMY_DATABASE_URI)
 
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, echo=True)
 Session = sessionmaker(bind=engine)
+
+
+async def get_db():
+    db: sessionmaker[Session] = Session()
+
+    try:
+        yield db
+    finally:
+        db.close()

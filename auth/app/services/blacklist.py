@@ -11,5 +11,5 @@ class BlacklistService:
         return num_added == 1
 
     @classmethod
-    def is_token_blacklisted(cls, token) -> bool:
+    def contains(cls, token) -> bool:
         return cls.redis.sismember(cls.blacklist_name, token)
