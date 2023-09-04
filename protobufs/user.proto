@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-service UserService {
+service Users {
     rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
     rpc ReadUser(ReadUserRequest) returns (ReadUserResponse);
     rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
@@ -24,7 +24,7 @@ message CreateUserResponse {
 }
 
 message ReadUserRequest {
-    string email = 2;
+    string email = 1;
 }
 
 message ReadUserResponse {
@@ -40,13 +40,10 @@ message UpdateUserResponse {
 }
 
 message DeleteUserRequest {
-
+    string email = 1;
 }
 
 message DeleteUserResponse {
-
+    bool success = 1;
+    string message = 2;
 }
-
-
-
-// $ python -m grpc_tools.protoc -I../../protos --python_out=. --pyi_out=. --grpc_python_out=. ../../protos/helloworld.proto
