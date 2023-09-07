@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+  # auth:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - '5433:5432'
+
+  postgres:
+    image: postgres:15.3-bullseye
+    ports:
+      - '5433:5432'
+    volumes:
+      - db_data:/var/lib/postgres/data
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=movies
+
+volumes:
+  db_data:
+  # redis_data:
+  # driver: local
