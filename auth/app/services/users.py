@@ -6,6 +6,18 @@ from app.utils.logger import LoggerFactory
 from sqlalchemy.orm import sessionmaker
 
 
+class UserCreationError(Exception):
+    pass
+
+
+class InvalidUserFieldsError(UserCreationError):
+    pass
+
+
+class UserUpdateError(Exception):
+    pass
+
+
 class RegistrationType(Enum):
     STANDARD = "standard"
     GOOGLE = "google"
@@ -41,12 +53,12 @@ class UserService:
         except sqlalchemy.exc.IntegrityError as e:
             cls.logger.error(e)
             session.rollback()
-            raise
+            raise InvalidUserFieldsError("Invalid fields") from e
 
         except Exception as e:
             cls.logger.error(e)
             session.rollback()
-            raise
+            raise UserCreationError() from e
 
     @classmethod
     def get_user_by_id(cls, id, session: Session) -> User:
