@@ -1,15 +1,12 @@
 import sqlalchemy
 from app.models.users.tables import User
-from app.models.database import Session
+from sqlalchemy.orm import Session
 from app.utils.logger import LoggerFactory
 from sqlalchemy.orm import sessionmaker
 
 
 class UserService:
     logger = LoggerFactory.create("UserService")
-
-    with Session() as session:
-        session.get
 
     @classmethod
     def create_user(cls, email, password, session: sessionmaker[Session], registration_type="standard") -> User:
@@ -23,14 +20,16 @@ class UserService:
             return user
 
         except sqlalchemy.exc.IntegrityError as e:
+            cls.logger.error(e)
             session.rollback()
             raise
         except Exception as e:
+            cls.logger.error(e)
             session.rollback()
             raise
 
-    def get_user_by_id(id, session) -> User:
-        user = session.get
+    def get_user_by_id(id, session: Session) -> User:
+        user = session.get(id)
         return user
 
     def get_user_by_email(email: str, session: Session) -> User:
