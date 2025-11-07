@@ -86,7 +86,7 @@ async def register_google(request: Request):
 
 
 @auth.get("/auth/google")
-async def google_auth(request: Request, db: Session = Depends(get_db)):
+async def google_auth(request: Request, db: Session = Depends(get_db)) -> CreateUserResponse:
     # should get email, generate token for the user
 
     # url = https://oauth2.googleapis.com/token
@@ -105,8 +105,17 @@ async def google_auth(request: Request, db: Session = Depends(get_db)):
 
     logger.debug(user)
 
+    access_token = TokenService.create_access(user.id)
+    refresh_token = TokenService.create_access(user.id)
+
+    data = CreateUserResponse(
+        access_token=access_token, refresh_token=refresh_token)
+
+    response = JSONResponse(content=data.model_dump(),
+                            status_code=status.HTTP_201_CREATED)
+
     # get the token from google itself
-    return user
+    return response
 
 
 @auth.post("/tokens")
